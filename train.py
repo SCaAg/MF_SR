@@ -5,13 +5,13 @@ from model import Generator, Discriminator
 import os
 import numpy as np
 from PIL import Image
-
+import torchvision.transforms as transforms
 
 # 设置文件夹路径和文件数量
 folder_path = 'training_set'  # 将 'set' 替换为实际文件夹的路径
-num_images = 100
+num_images = 2000
 
-# 创建一个空列表来存储图像数组
+# 创建一个空列表来存储图像张量
 big_orig_data_set = []
 
 # 循环读取并处理图像
@@ -22,18 +22,25 @@ for i in range(1, num_images + 1):
     # 打开图像并转换为RGB模式
     img = Image.open(image_path).convert('RGB')
 
-    # 将图像转换为NumPy数组
-    img_array = np.array(img)
+    # 将图像转换为tensor
+    transform = transforms.Compose([
+        transforms.ToTensor(),  # 将图像转换为张量
+    ])
 
+    # 应用图像转换
+    tensor_image = transform(img)
+
+    # 增加一个维度以创建形状为1, 3, 50, 50的张量
+    tensor_image = tensor_image.unsqueeze(0)
     # 将图像数组添加到列表中
-    big_orig_data_set.append(img_array)
+    big_orig_data_set.append(tensor_image)
 
-print("图像处理完成，存储在big_orig_data_set中。")
+print("图像处理完成,存储在big_orig_data_set中。")
 
 
 # 设置文件夹路径和文件数量
 folder_path = 'small'  # 将 'set' 替换为实际文件夹的路径
-num_images = 100
+num_images = 2000
 
 # 创建一个空列表来存储图像数组
 small_orig_data_set = []
@@ -46,13 +53,23 @@ for i in range(1, num_images + 1):
     # 打开图像并转换为RGB模式
     img = Image.open(image_path).convert('RGB')
 
-    # 将图像转换为NumPy数组
-    img_array = np.array(img)
+    # 将图像转换为tensor
+    transform = transforms.Compose([
+        transforms.ToTensor(),  # 将图像转换为张量
+    ])
 
+    # 应用图像转换
+    tensor_image = transform(img)
+
+    # 增加一个维度以创建形状为1, 3, 50, 50的张量
+    tensor_image = tensor_image.unsqueeze(0)
     # 将图像数组添加到列表中
-    small_orig_data_set.append(img_array)
+    small_orig_data_set.append(tensor_image)
 
-print("图像处理完成，存储在small_orig_data_set中。")
+print("图像处理完成,存储在small_orig_data_set中。")
+
+print(small_orig_data_set[0].shape)
+print(big_orig_data_set[0].shape)
 
 
 # 创建Generator和Discriminator实例
@@ -70,9 +87,10 @@ num_epochs = 1000  # 训练轮数，根据需要进行调整
 
 for epoch in range(num_epochs):
     # big_orig_data_set中包含真实数据
-    for big_orig, small_orig in zip(big_orig_data_set, small_orig_data_set):
-        small_orig_tensor = torch.from_numpy(small_orig).float()
-        big_orig_tensor = torch.from_numpy(big_orig).float()
+    for i in range(1000):
+        small_orig_tensor = small_orig_data_set[i]
+
+        big_orig_tensor = big_orig_data_set[i]
         # 训练Discriminator
         optimizer_discriminator.zero_grad()
 
@@ -81,6 +99,7 @@ for epoch in range(num_epochs):
 
         # 计算真实数据的损失
         real_labels = torch.ones(big_orig_tensor.size(0), 1)  # 真实数据的标签为1
+        print(big_orig_tensor.shape)
         real_loss = criterion(discriminator(big_orig_tensor), real_labels)
 
         # 计算假数据的损失
@@ -108,8 +127,8 @@ for epoch in range(num_epochs):
         generator_loss.backward()
         optimizer_generator.step()
 
-    # 打印损失等信息来监控训练过程
-    print(f'Epoch [{epoch}/{num_epochs}] Generator Loss: {generator_loss.item():.4f}, Discriminator Loss: {total_discriminator_loss.item():.4f}')
+        # 打印损失等信息来监控训练过程
+        print(f'Epoch [{epoch}/{num_epochs}] Generator Loss: {generator_loss.item():.4f}, Discriminator Loss: {total_discriminator_loss.item():.4f}')
 
 
 torch.save(generator, 'generator.pth')
